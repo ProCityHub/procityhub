@@ -1,0 +1,70 @@
+name: GARVIS Release Agent
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Build & Publish GARVIS Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest build
+
+      - name: Run self-test
+        working-directory: genesis-x
+        run: python brain.py
+
+      - name: Run test suite
+        working-directory: genesis-x
+        run: pytest tests/ -v
+
+      - name: Build package
+        working-directory: genesis-x
+        run: python -m build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            genesis-x/dist/*.whl
+            genesis-x/dist/*.tar.gz
+          body: |
+            ## GARVIS / Genesis X Release
+
+            **System:** GARVIS / Genesis X
+            **Creator:** Adrien D. Thomas / ProCityHub
+            **Epistemic Boundary:** NOT_ESTABLISHED for AGI or consciousness
+
+            ### What's included
+            - Genesis X Double-Slit OAB Falsification Brain
+            - 13 pytest tests (all passing)
+            - Interactive double-slit visualization
+            - GARVIS Body Without Brain architecture (Directive BASE44_001)
+
+            ### Install
+            ```bash
+            pip install genesis-x-*.whl
+            python -m genesis_x.brain
+            ```
+
+            ---
+            Mathematical consistency and software PASS do not establish physical truth.

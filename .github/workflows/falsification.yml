@@ -1,0 +1,111 @@
+name: GARVIS Falsification Agent
+
+on:
+  schedule:
+    # Daily at 06:00 UTC (midnight Mountain Time)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'Dataset to evaluate (sample_data.csv or synthetic)'
+        required: false
+        default: 'sample_data.csv'
+
+jobs:
+  falsify:
+    name: Run Double-Slit Falsification
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pytest
+
+      - name: Run self-test
+        working-directory: genesis-x
+        run: |
+          echo "## GARVIS Self-Test" >> $GITHUB_STEP_SUMMARY
+          python brain.py | tee self-test-output.json
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat self-test-output.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Evaluate sample dataset
+        working-directory: genesis-x
+        run: |
+          echo "## Falsification Results — Sample Data" >> $GITHUB_STEP_SUMMARY
+          python brain.py examples/sample_data.csv | tee csv-output.json
+          STATUS=$(python3 -c "import json; print(json.load(open('csv-output.json'))['score']['status'])")
+          echo "**Status:** \`$STATUS\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat csv-output.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Run synthetic QM dataset
+        working-directory: genesis-x
+        run: |
+          echo "## Synthetic QM Dataset" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import sys, json
+          sys.path.insert(0, '.')
+          from brain import DoubleSlitBrain, synthetic_qm_dataset
+          brain = DoubleSlitBrain()
+          for obs in synthetic_qm_dataset():
+              brain.observe(obs)
+          score = brain.score()
+          print(json.dumps(score, indent=2))
+          " | tee qm-synth-output.json
+          STATUS=$(python3 -c "import json; print(json.load(open('qm-synth-output.json'))['status'])")
+          echo "**Status:** \`$STATUS\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run synthetic Phi dataset
+        working-directory: genesis-x
+        run: |
+          echo "## Synthetic Phi Dataset" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import sys, json
+          sys.path.insert(0, '.')
+          from brain import DoubleSlitBrain, synthetic_phi_dataset
+          brain = DoubleSlitBrain()
+          for obs in synthetic_phi_dataset():
+              brain.observe(obs)
+          score = brain.score()
+          print(json.dumps(score, indent=2))
+          " | tee phi-synth-output.json
+          STATUS=$(python3 -c "import json; print(json.load(open('phi-synth-output.json'))['status'])")
+          echo "**Status:** \`$STATUS\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check for status changes
+        working-directory: genesis-x
+        run: |
+          QM_STATUS=$(python3 -c "import json; print(json.load(open('qm-synth-output.json'))['status'])")
+          PHI_STATUS=$(python3 -c "import json; print(json.load(open('phi-synth-output.json'))['status'])")
+          CSV_STATUS=$(python3 -c "import json; print(json.load(open('csv-output.json'))['score']['status'])")
+
+          echo "::notice::QM synthetic: $QM_STATUS | Phi synthetic: $PHI_STATUS | CSV: $CSV_STATUS"
+
+          if [ "$QM_STATUS" != "DIRECTIONAL_SUPPORT_QM" ]; then
+            echo "::warning::QM synthetic dataset no longer supports QM as expected — status: $QM_STATUS"
+          fi
+          if [ "$PHI_STATUS" != "DIRECTIONAL_SUPPORT_PHI" ]; then
+            echo "::warning::Phi synthetic dataset no longer supports Phi as expected — status: $PHI_STATUS"
+          fi
+
+      - name: Upload falsification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: falsification-report
+          path: |
+            genesis-x/self-test-output.json
+            genesis-x/csv-output.json
+            genesis-x/qm-synth-output.json
+            genesis-x/phi-synth-output.json
+          retention-days: 30

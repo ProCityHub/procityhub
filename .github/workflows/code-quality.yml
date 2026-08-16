@@ -1,0 +1,132 @@
+name: GARVIS Code Quality Agent
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linters
+        run: pip install flake8 black isort
+
+      - name: Run flake8
+        working-directory: genesis-x
+        run: flake8 brain.py tests/ --max-line-length=120 --statistics || true
+
+      - name: Check formatting with black
+        working-directory: genesis-x
+        run: black --check --line-length=120 brain.py tests/ || true
+
+      - name: Check import order with isort
+        working-directory: genesis-x
+        run: isort --check-only brain.py tests/ || true
+
+  garvis-naming:
+    name: GARVIS Naming Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify zero JARVIS references
+        run: |
+          echo "## GARVIS Naming Compliance" >> $GITHUB_STEP_SUMMARY
+          HITS=$(grep -rni "jarvis" --include="*.md" --include="*.py" --include="*.js" --include="*.jsx" --include="*.json" --include="*.html" --include="*.yml" . | grep -v ".git/" | wc -l)
+          if [ "$HITS" -eq 0 ]; then
+            echo "✅ Zero JARVIS references found — naming compliant" >> $GITHUB_STEP_SUMMARY
+            echo "::notice::GARVIS naming compliant — zero JARVIS references"
+          else
+            echo "❌ Found $HITS JARVIS references — must be renamed to GARVIS" >> $GITHUB_STEP_SUMMARY
+            echo "::error::$HITS JARVIS references found — rename to GARVIS required"
+            grep -rni "jarvis" --include="*.md" --include="*.py" --include="*.js" --include="*.jsx" --include="*.json" --include="*.html" . | grep -v ".git/"
+            exit 1
+          fi
+
+      - name: Verify brain.py system name
+        working-directory: genesis-x
+        run: |
+          python3 -c "
+          import sys; sys.path.insert(0, '.')
+          from brain import SYSTEM, CREATOR, ORGANIZATION
+          assert 'GARVIS' in SYSTEM, f'SYSTEM must contain GARVIS, got: {SYSTEM}'
+          assert 'JARVIS' not in SYSTEM, f'SYSTEM must not contain JARVIS, got: {SYSTEM}'
+          assert CREATOR == 'Adrien D. Thomas', f'Wrong creator: {CREATOR}'
+          assert ORGANIZATION == 'ProCityHub', f'Wrong org: {ORGANIZATION}'
+          print(f'✅ SYSTEM={SYSTEM}')
+          print(f'✅ CREATOR={CREATOR}')
+          print(f'✅ ORGANIZATION={ORGANIZATION}')
+          "
+
+  invoke-llm-audit:
+    name: Zero LLM Invocation Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for InvokeLLM
+        run: |
+          echo "## Zero LLM Audit (Directive BASE44_001 §2)" >> $GITHUB_STEP_SUMMARY
+          HITS=$(grep -rni "InvokeLLM" --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" . | grep -v ".git/" | wc -l)
+          if [ "$HITS" -eq 0 ]; then
+            echo "✅ Zero InvokeLLM calls found — directive compliant" >> $GITHUB_STEP_SUMMARY
+            echo "::notice::Zero InvokeLLM calls — BASE44_001 §2 compliant"
+          else
+            echo "❌ Found $HITS InvokeLLM calls — violates Directive BASE44_001 §2" >> $GITHUB_STEP_SUMMARY
+            echo "::error::$HITS InvokeLLM calls found — violates BASE44_001 §2"
+            grep -rni "InvokeLLM" --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" . | grep -v ".git/"
+            exit 1
+          fi
+
+      - name: Scan for canned responses
+        run: |
+          echo "## Canned Response Audit (Directive BASE44_001 §9)" >> $GITHUB_STEP_SUMMARY
+          HITS=$(grep -rni "canned\|hardcoded.*response\|fake.*brain" --include="*.js" --include="*.jsx" . | grep -v ".git/" | wc -l)
+          if [ "$HITS" -eq 0 ]; then
+            echo "✅ No canned response patterns detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠ Review potential canned response patterns ($HITS hits)" >> $GITHUB_STEP_SUMMARY
+            grep -rni "canned\|hardcoded.*response\|fake.*brain" --include="*.js" --include="*.jsx" . | grep -v ".git/" || true
+          fi
+
+      - name: Verify brainAdapter is sole cognition path
+        run: |
+          echo "## Sole Cognition Socket Audit (Directive BASE44_001 §3)" >> $GITHUB_STEP_SUMMARY
+          if [ -f "garvis-body/src/modules/brainAdapter.js" ]; then
+            echo "✅ brainAdapter.js exists at correct path" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ brainAdapter.js not found" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          # Check no other file exports a think() function
+          OTHER_THINK=$(grep -rn "export.*function think\|export.*think" --include="*.js" --include="*.jsx" garvis-body/ | grep -v "brainAdapter" | wc -l)
+          if [ "$OTHER_THINK" -eq 0 ]; then
+            echo "✅ brainAdapter.js is the sole cognition export" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Found $OTHER_THINK other cognition exports — violates single-socket rule" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Verify empty allowlist
+        run: |
+          echo "## Freeze Gate Audit (Directive BASE44_001 §7)" >> $GITHUB_STEP_SUMMARY
+          if grep -q "ACTION_ALLOWLIST = \[\]" garvis-body/src/modules/actionDispatcher.js; then
+            echo "✅ Action allowlist is empty — freeze gate intact" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Action allowlist is not empty — freeze gate violated" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

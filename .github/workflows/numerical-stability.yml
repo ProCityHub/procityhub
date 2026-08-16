@@ -1,0 +1,113 @@
+name: GARVIS Numerical Stability Agent
+
+on:
+  push:
+    paths:
+      - 'genesis-x/brain.py'
+      - 'genesis-x/tests/**'
+  pull_request:
+    paths:
+      - 'genesis-x/brain.py'
+      - 'genesis-x/tests/**'
+  workflow_dispatch:
+
+jobs:
+  stability:
+    name: Edge Case & Stability Probe
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run stability probe
+        working-directory: genesis-x
+        run: |
+          python3 << 'EOF'
+          import sys, math, json
+          sys.path.insert(0, '.')
+          from brain import phi_visibility, qm_visibility, validate_inputs
+
+          results = {"checks": [], "passed": 0, "failed": 0}
+
+          def check(name, condition, detail=""):
+              status = "PASS" if condition else "FAIL"
+              results["checks"].append({"name": name, "status": status, "detail": detail})
+              if condition:
+                  results["passed"] += 1
+              else:
+                  results["failed"] += 1
+
+          # 1. EPS boundary (the bug we fixed)
+          v = phi_visibility(1.0, 1e-12, 1.0)
+          check("EPS boundary (B=1e-12)", v > 0, f"V_phi={v:.6e}")
+
+          # 2. Extreme asymmetry — V_phi should stay finite
+          v = phi_visibility(1.0, 1e-6, 1.0)
+          check("Extreme asymmetry (A/B=1e6)", math.isfinite(v) and v > 0, f"V_phi={v:.6e}")
+
+          # 3. V_phi should not exceed 1.0 for any ratio
+          overflow = False
+          for exp in range(1, 8):
+              ratio = 10**exp
+              vphi = phi_visibility(1.0, 1.0/ratio, 1.0)
+              if vphi > 1.0:
+                  overflow = True
+                  check(f"V_phi <= 1 at A/B=1e{exp}", False, f"V_phi={vphi:.6f}")
+          if not overflow:
+              check("V_phi <= 1.0 for all A/B in [10, 1e7]", True)
+
+          # 4. Zero coherence — both models return 0
+          check("O=0 gives V_QM=0", qm_visibility(1.0, 0.5, 0.0) == 0.0)
+          check("O=0 gives V_phi=0", phi_visibility(1.0, 0.5, 0.0) == 0.0)
+
+          # 5. Symmetric inputs — V_phi == V_QM
+          vqm = qm_visibility(1.0, 1.0, 1.0)
+          vphi = phi_visibility(1.0, 1.0, 1.0)
+          check("Symmetric: V_phi == V_QM", abs(vqm - vphi) < 1e-12, f"V_QM={vqm:.10f}, V_phi={vphi:.10f}")
+
+          # 6. A=B=0 raises ValueError
+          try:
+              qm_visibility(0.0, 0.0, 1.0)
+              check("A=B=0 raises ValueError", False, "No exception raised")
+          except ValueError:
+              check("A=B=0 raises ValueError", True)
+
+          # 7. Negative A raises ValueError
+          try:
+              qm_visibility(-1.0, 0.5, 1.0)
+              check("Negative A raises ValueError", False, "No exception raised")
+          except ValueError:
+              check("Negative A raises ValueError", True)
+
+          # 8. O > 1 raises ValueError
+          try:
+              qm_visibility(1.0, 0.5, 1.5)
+              check("O > 1 raises ValueError", False, "No exception raised")
+          except ValueError:
+              check("O > 1 raises ValueError", True)
+
+          print(json.dumps(results, indent=2))
+
+          if results["failed"] > 0:
+              print(f"\n::error::{results['failed']} stability checks FAILED")
+              sys.exit(1)
+          else:
+              print(f"\n::notice::All {results['passed']} stability checks PASSED")
+          EOF
+
+      - name: Run full test suite
+        working-directory: genesis-x
+        run: pytest tests/ -v
+
+      - name: Upload stability report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stability-report
+          path: genesis-x/.pytest_cache/
+          retention-days: 7
