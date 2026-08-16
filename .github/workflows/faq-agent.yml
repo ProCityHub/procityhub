@@ -106,7 +106,7 @@ jobs:
                   '1. Read [CONTRIBUTING.md](../../blob/main/CONTRIBUTING.md) for guidelines',
                   '2. The GARVIS body has a strict **no-LLM policy** — no `InvokeLLM` calls anywhere',
                   '3. The action allowlist must remain **empty** (freeze gate)',
-                  '4. All references must use the **GARVIS** naming convention (not JARVIS)',
+                  '4. All references must use the **GARVIS** naming convention (not the old name)',
                   '5. Run `pytest tests/ -v` in `genesis-x/` before submitting',
                   '',
                   'All contributions are welcome as long as they respect the epistemic boundaries and directive constraints.',

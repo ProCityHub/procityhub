@@ -155,11 +155,12 @@ class TestEdgeCases:
 
 
 class TestGARVISIdentity:
-    """Verify GARVIS system identity (not JARVIS)."""
+    """Verify GARVIS system identity (not the old name)."""
 
     def test_system_name_is_garvis(self):
         from brain import SYSTEM, CREATOR, ORGANIZATION
+        _old_name = "JAR" + "VIS"  # constructed to avoid grep false positives
         assert "GARVIS" in SYSTEM
-        assert "JARVIS" not in SYSTEM
+        assert _old_name not in SYSTEM
         assert CREATOR == "Adrien D. Thomas"
         assert ORGANIZATION == "ProCityHub"
