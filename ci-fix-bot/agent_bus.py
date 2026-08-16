@@ -26,11 +26,10 @@ import json
 import os
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 # ============================================================
 # Agent Registry — who exists and what they do
@@ -285,7 +284,11 @@ def create_agent_issue(
         "-H", "Accept: application/vnd.github.v3+json",
         f"https://api.github.com/repos/{repo}/issues",
         "-d", json.dumps({
-            "title": f"[{message.message_type}] {message.from_agent} → {message.to_agent}: {message.subject}",
+            "title": (
+                f"[{message.message_type}] "
+                f"{message.from_agent} → "
+                f"{message.to_agent}: {message.subject}"
+            ),
             "body": body,
             "labels": labels,
         }),
@@ -377,7 +380,7 @@ def coordinate(repo_root: Path, repo: str, token: str) -> dict[str, Any]:
 
     correlations = []
     for fp, msgs in fingerprint_groups.items():
-        unique_agents = set(m["from_agent"] for m in msgs)
+        unique_agents = {m["from_agent"] for m in msgs}
         if len(unique_agents) > 1:
             correlations.append({
                 "fingerprint": fp,
@@ -535,7 +538,7 @@ def main() -> None:
         bus = load_bus(repo_root)
         messages = bus.get("messages", [])
         print(f"\nAgent Bus — {len(messages)} messages\n")
-        for i, m in enumerate(messages):
+        for m in messages:
             delivered = "✓" if m.get("delivered") else "✗"
             print(
                 f"  [{delivered}] {m['from_agent']:20s} → "
