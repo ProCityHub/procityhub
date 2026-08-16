@@ -116,7 +116,7 @@ jobs:
 
             core.info(`Greeting posted for @${author}'s ${targetType}`);
       - name: Brain gate — observe & falsify
-      if: always()
+        if: always()
         run: |
           python3 ci-fix-bot/brain_gate.py observe \
             --agent greeting \

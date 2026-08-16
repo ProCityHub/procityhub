@@ -50,7 +50,7 @@ jobs:
           path: genesis-x/.pytest_cache/
           retention-days: 7
       - name: Brain gate — observe & falsify
-      if: always()
+        if: always()
         run: |
           python3 ci-fix-bot/brain_gate.py observe \
             --agent test-agent \

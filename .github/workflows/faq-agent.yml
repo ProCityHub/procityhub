@@ -221,7 +221,7 @@ jobs:
               core.info(`FAQ response posted for comment on issue #${issue.number}`);
             }
       - name: Brain gate — observe & falsify
-      if: always()
+        if: always()
         run: |
           python3 ci-fix-bot/brain_gate.py observe \
             --agent faq \

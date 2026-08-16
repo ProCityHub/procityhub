@@ -139,7 +139,7 @@ jobs:
             exit 1
           fi
       - name: Brain gate — observe & falsify
-      if: always()
+        if: always()
         run: |
           python3 ci-fix-bot/brain_gate.py observe \
             --agent code-quality \
