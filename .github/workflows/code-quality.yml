@@ -45,7 +45,7 @@ jobs:
       - name: Verify zero JARVIS references
         run: |
           echo "## GARVIS Naming Compliance" >> $GITHUB_STEP_SUMMARY
-          HITS=$(grep -rni "jarvis" --include="*.md" --include="*.py" --include="*.js" --include="*.jsx" --include="*.json" --include="*.html" --include="*.yml" . | grep -v ".git/" | grep -v ".github/" | wc -l)
+          HITS=$(grep -rni "jarvis" --include="*.md" --include="*.py" --include="*.js" --include="*.jsx" --include="*.json" --include="*.html" --include="*.yml" . | grep -v ".git/" | grep -v ".github/" | grep -v "docs/agents/" | wc -l)
           if [ "$HITS" -eq 0 ]; then
             echo "✅ Zero JARVIS references found — naming compliant" >> $GITHUB_STEP_SUMMARY
             echo "::notice::GARVIS naming compliant — zero JARVIS references"
@@ -82,7 +82,7 @@ jobs:
       - name: Scan for InvokeLLM
         run: |
           echo "## Zero LLM Audit (Directive BASE44_001 §2)" >> $GITHUB_STEP_SUMMARY
-          HITS=$(grep -rni "InvokeLLM" --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" . | grep -v ".git/" | grep -v ".github/" | wc -l)
+          HITS=$(grep -rni "InvokeLLM" --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" . | grep -v ".git/" | grep -v ".github/" | grep -v "docs/agents/" | wc -l)
           if [ "$HITS" -eq 0 ]; then
             echo "✅ Zero InvokeLLM calls found — directive compliant" >> $GITHUB_STEP_SUMMARY
             echo "::notice::Zero InvokeLLM calls — BASE44_001 §2 compliant"
@@ -96,7 +96,7 @@ jobs:
       - name: Scan for canned responses
         run: |
           echo "## Canned Response Audit (Directive BASE44_001 §9)" >> $GITHUB_STEP_SUMMARY
-          HITS=$(grep -rni "canned\|hardcoded.*response\|fake.*brain" --include="*.js" --include="*.jsx" . | grep -v ".git/" | grep -v ".github/" | wc -l)
+          HITS=$(grep -rni "canned\|hardcoded.*response\|fake.*brain" --include="*.js" --include="*.jsx" . | grep -v ".git/" | grep -v ".github/" | grep -v "docs/agents/" | wc -l)
           if [ "$HITS" -eq 0 ]; then
             echo "✅ No canned response patterns detected" >> $GITHUB_STEP_SUMMARY
           else

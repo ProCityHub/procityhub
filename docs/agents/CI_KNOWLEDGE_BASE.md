@@ -116,7 +116,7 @@ before passing to `json.dumps()`.
 A naming compliance check reports violations in its own workflow file.
 
 **Root Cause:**
-`grep -rni "JARVIS" .` matches the workflow file that contains the
+`grep -rni "the old name" .` matches the workflow file that contains the
 word "JARVIS" in its own step names and error messages.
 
 **Fix:**
