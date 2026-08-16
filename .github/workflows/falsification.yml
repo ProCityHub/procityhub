@@ -52,16 +52,19 @@ jobs:
         working-directory: genesis-x
         run: |
           echo "## Synthetic QM Dataset" >> $GITHUB_STEP_SUMMARY
-          python3 -c "
+          python3 << 'EOF' | tee qm-synth-output.json
           import sys, json
+          from dataclasses import asdict
           sys.path.insert(0, '.')
           from brain import DoubleSlitBrain, synthetic_qm_dataset
           brain = DoubleSlitBrain()
           for obs in synthetic_qm_dataset():
               brain.observe(obs)
           score = brain.score()
-          print(json.dumps(score, indent=2))
-          " | tee qm-synth-output.json
+          d = asdict(score)
+          d['status'] = score.status.value
+          print(json.dumps(d, indent=2))
+          EOF
           STATUS=$(python3 -c "import json; print(json.load(open('qm-synth-output.json'))['status'])")
           echo "**Status:** \`$STATUS\`" >> $GITHUB_STEP_SUMMARY
 
@@ -69,16 +72,19 @@ jobs:
         working-directory: genesis-x
         run: |
           echo "## Synthetic Phi Dataset" >> $GITHUB_STEP_SUMMARY
-          python3 -c "
+          python3 << 'EOF' | tee phi-synth-output.json
           import sys, json
+          from dataclasses import asdict
           sys.path.insert(0, '.')
           from brain import DoubleSlitBrain, synthetic_phi_dataset
           brain = DoubleSlitBrain()
           for obs in synthetic_phi_dataset():
               brain.observe(obs)
           score = brain.score()
-          print(json.dumps(score, indent=2))
-          " | tee phi-synth-output.json
+          d = asdict(score)
+          d['status'] = score.status.value
+          print(json.dumps(d, indent=2))
+          EOF
           STATUS=$(python3 -c "import json; print(json.load(open('phi-synth-output.json'))['status'])")
           echo "**Status:** \`$STATUS\`" >> $GITHUB_STEP_SUMMARY
 

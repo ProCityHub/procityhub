@@ -24,6 +24,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: pip install pytest
+
       - name: Run stability probe
         working-directory: genesis-x
         run: |

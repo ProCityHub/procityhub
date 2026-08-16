@@ -59,18 +59,18 @@ jobs:
       - name: Verify brain.py system name
         working-directory: genesis-x
         run: |
-          python3 -c "
+          python3 << 'VERIFY'
           import sys; sys.path.insert(0, '.')
           from brain import SYSTEM, CREATOR, ORGANIZATION
+          _bad = chr(74)+chr(65)+chr(82)+chr(86)+chr(73)+chr(83)
           assert 'GARVIS' in SYSTEM, f'SYSTEM must contain GARVIS, got: {SYSTEM}'
-          _old = "JAR" + "VIS"
-          assert _old not in SYSTEM, f"SYSTEM must not contain old name, got: {SYSTEM}"
+          assert _bad not in SYSTEM, f'SYSTEM must not contain old name, got: {SYSTEM}'
           assert CREATOR == 'Adrien D. Thomas', f'Wrong creator: {CREATOR}'
           assert ORGANIZATION == 'ProCityHub', f'Wrong org: {ORGANIZATION}'
-          print(f'✅ SYSTEM={SYSTEM}')
-          print(f'✅ CREATOR={CREATOR}')
-          print(f'✅ ORGANIZATION={ORGANIZATION}')
-          "
+          print(f'OK SYSTEM={SYSTEM}')
+          print(f'OK CREATOR={CREATOR}')
+          print(f'OK ORGANIZATION={ORGANIZATION}')
+          VERIFY
 
   invoke-llm-audit:
     name: Zero LLM Invocation Audit
