@@ -1,0 +1,13 @@
+{
+  "entity_name": "ActionLog",
+  "schema": {
+    "properties": {
+      "timestamp": { "type": "string" },
+      "action_name": { "type": "string" },
+      "params": { "type": "object" },
+      "outcome": { "type": "string", "enum": ["executed", "blocked", "not_implemented"] },
+      "blocked_reason": { "type": "string" }
+    },
+    "type": "object"
+  }
+}

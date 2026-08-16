@@ -1,0 +1,12 @@
+[
+  { "organ": "EAR",            "status": "IMPLEMENTED", "last_invoked": null, "notes": "Speech-to-text capture via Web Speech API" },
+  { "organ": "MOUTH",          "status": "IMPLEMENTED", "last_invoked": null, "notes": "Text-to-speech output via SpeechSynthesis API" },
+  { "organ": "EYE",            "status": "IMPLEMENTED", "last_invoked": null, "notes": "Camera frame capture via getUserMedia, still-frame grab, upload" },
+  { "organ": "MEMORY",         "status": "IMPLEMENTED", "last_invoked": null, "notes": "Persistent log of utterances, frames, events" },
+  { "organ": "PROPRIOCEPTION", "status": "IMPLEMENTED", "last_invoked": null, "notes": "Device state: battery, online, orientation, permissions" },
+  { "organ": "HAND",           "status": "IMPLEMENTED", "last_invoked": null, "notes": "Action dispatcher with allowlist (allowlist empty)" },
+  { "organ": "VOICE_GATE",     "status": "IMPLEMENTED", "last_invoked": null, "notes": "Wake/sleep toggle, mute, listening indicator" },
+  { "organ": "BRAIN",          "status": "ABSENT",      "last_invoked": null, "notes": "Cognition — not installed" },
+  { "organ": "WILL",           "status": "ABSENT",      "last_invoked": null, "notes": "Goal formation, planning — not installed" },
+  { "organ": "JUDGMENT",       "status": "ABSENT",      "last_invoked": null, "notes": "Evaluation, preference, selection — not installed" }
+]

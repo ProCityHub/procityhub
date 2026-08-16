@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genesis X — Double-Slit Interference Discriminator</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            phi: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+               glow: 'rgba(245, 158, 11, 0.25)'
+            },
+            qm: {
+              400: '#38bdf8',
+              500: '#0284c7',
+              600: '#0369a1',
+              glow: 'rgba(56, 189, 248, 0.25)'
+            }
+          },
+          fontFamily: {
+            mono: ['JetBrains Mono', 'Fira Code', 'Courier New', 'monospace'],
+            sans: ['Inter', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js 4.x from jsdelivr CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Custom Golden Ratio & Glow Styling */
+    body {
+      background-color: #070a11;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(245, 158, 11, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.05) 0%, transparent 40%),
+        linear-gradient(to bottom, rgba(7, 10, 17, 0.8), rgba(7, 10, 17, 0.98));
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* Range slider custom styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type=range]:focus {
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #1e293b;
+      border-radius: 9999px;
+      border: 1px solid #334155;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #f59e0b;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -6px;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    
+    .range-qm::-webkit-slider-thumb {
+      background: #38bdf8 !important;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5) !important;
+    }
+
+    /* Glassmorphism Card Style */
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+
+    .glass-card-phi {
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.05);
+    }
+
+    .glass-card-qm {
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.05);
+    }
+
+    /* Subtle math formula font styling */
+    .math-font {
+      font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased text-slate-200 selection:bg-phi-500 selection:text-slate-950">
+
+  <!-- Main Container -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- HEADER SECTION -->
+    <header class="glass-card rounded-2xl p-6 relative overflow-hidden">
+      <!-- Golden Spiral Decorative Background SVG -->
+      <div class="absolute -right-12 -top-12 opacity-10 pointer-events-none">
+        <svg width="300" height="300" viewBox="0 0 100 100" fill="none" stroke="#f59e0b" stroke-width="0.5">
+          <path d="M0,100 A100,100 0 0,1 100,0 A61.8,61.8 0 0,1 38.2,100 A38.2,38.2 0 0,1 38.2,61.8 A23.6,23.6 0 0,1 61.8,61.8" />
+        </svg>
+      </div>
+
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3 mb-1">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-phi-500/10 text-phi-400 border border-phi-500/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-phi-400 mr-1.5 animate-pulse"></span>
+              Genesis X Model &bull; Double-Slit Interference
+            </span>
+            <span class="text-xs font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
+              &phi; &approx; 1.618034
+            </span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            Genesis X &mdash; Double-Slit Interference Discriminator
+          </h1>
+          <p class="text-sm text-slate-400 mt-1">
+            Comparing Quantum Mechanical visibility (<span class="text-qm-400 font-mono">V_QM</span>) vs. Golden-Ratio Canonical Lattice visibility (<span class="text-phi-400 font-mono">V_&phi;</span>)
+          </p>
+        </div>
+
+        <!-- Credit Badge -->
+        <div class="flex items-center gap-3 bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-xs">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-phi-500 to-amber-700 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md">
+            &phi;
+          </div>
+          <div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-semibold">Model Architect / Creator</div>
+            <div class="font-semibold text-slate-100">Adrien D. Thomas / ProCityHub</div>
+            <div class="text-[10px] text-phi-400 font-mono">GARVIS / Genesis X Framework</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- GOLDEN RATIO GRID LAYOUT (Approx 38.2% Controls / 61.8% Visualizations) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- LEFT COLUMN: CONTROLS & METRICS (lg:col-span-5 ~ 38.2%) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- CONTROLS CARD -->
+        <div class="glass-card rounded-2xl p-6 space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-phi-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+              </svg>
+              Input Parameters
+            </h2>
+            <span class="text-xs text-slate-400 font-mono">Interactive Sliders</span>
+          </div>
+
+          <!-- Slider A -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-sm">
+              <label for="sliderA" class="font-medium text-slate-200 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                Path Intensity A:
+              </label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="numA" min="0.01" max="2.0" step="0.01" value="1.00"
+                  class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-xs text-phi-400 focus:outline-none focus:border-phi-500">
+                <span class="text-xs text-slate-500 font-mono">W/m²</span>
+              </div>
+            </div>
+            <input type="range" id="sliderA" min="0.01" max="2.0" step="0.01" value="1.00" class="w-full">
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>0.01</span>
+              <span>1.00</span>
+              <span>2.00</span>
+            </div>
+          </div>
+
+          <!-- Slider B -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-sm">
+              <label for="sliderB" class="font-medium text-slate-200 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                Path Intensity B:
+              </label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="numB" min="0.01" max="2.0" step="0.01" value="0.50"
+                  class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-xs text-phi-400 focus:outline-none focus:border-phi-500">
+                <span class="text-xs text-slate-500 font-mono">W/m²</span>
+              </div>
+            </div>
+            <input type="range" id="sliderB" min="0.01" max="2.0" step="0.01" value="0.50" class="w-full">
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>0.01</span>
+              <span>1.00</span>
+              <span>2.00</span>
+            </div>
+          </div>
+
+          <!-- Slider O (Coherence) -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-sm">
+              <label for="sliderO" class="font-medium text-slate-200 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-qm-400"></span>
+                Coherence Factor O:
+              </label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="numO" min="0.0" max="1.0" step="0.01" value="0.80"
+                  class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-xs text-qm-400 focus:outline-none focus:border-qm-500">
+                <span class="text-xs text-slate-500 font-mono">[0, 1]</span>
+              </div>
+            </div>
+            <input type="range" id="sliderO" min="0.0" max="1.0" step="0.01" value="0.80" class="w-full range-qm">
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>0.00 (Incoherent)</span>
+              <span>0.50</span>
+              <span>1.00 (Coherent)</span>
+            </div>
+          </div>
+
+          <!-- Presets -->
+          <div class="pt-2 border-t border-slate-800">
+            <div class="text-xs text-slate-400 font-semibold mb-2">Preset Test Scenarios:</div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button onclick="setPreset(1.0, 1.0, 0.8)" 
+                class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition text-left flex items-center justify-between">
+                <span>Symmetric</span>
+                <span class="font-mono text-[10px] text-slate-400">A=B</span>
+              </button>
+              <button onclick="setPreset(1.0, 0.5, 0.8)" 
+                class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition text-left flex items-center justify-between">
+                <span>Moderate Asymm.</span>
+                <span class="font-mono text-[10px] text-phi-400">A=1, B=0.5</span>
+              </button>
+              <button onclick="setPreset(1.8, 0.2, 0.9)" 
+                class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition text-left flex items-center justify-between">
+                <span>High Asymmetry</span>
+                <span class="font-mono text-[10px] text-phi-400">A=1.8, B=0.2</span>
+              </button>
+              <button onclick="setPreset(1.2, 0.3, 0.3)" 
+                class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition text-left flex items-center justify-between">
+                <span>Low Coherence</span>
+                <span class="font-mono text-[10px] text-slate-400">O=0.3</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLASSIFICATION BADGE CARD -->
+        <div class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Path Symmetry Classification</div>
+          
+          <div id="classificationBadge" class="p-4 rounded-xl flex items-center justify-between transition-all duration-300">
+            <div class="flex items-center gap-3">
+              <div id="badgeIcon" class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">
+                <!-- Dynamic Icon -->
+              </div>
+              <div>
+                <div id="badgeTitle" class="font-bold text-sm tracking-wide">
+                  <!-- Dynamic Title -->
+                </div>
+                <div id="badgeSub" class="text-xs opacity-80 mt-0.5">
+                  <!-- Dynamic Description -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DIFFERENCE INDICATOR CARD -->
+        <div class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="flex justify-between items-center">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Visibility Difference Indicator</div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+              V_&phi; &minus; V_QM
+            </span>
+          </div>
+
+          <div class="flex items-baseline justify-between bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+            <div>
+              <div class="text-xs text-slate-400">Absolute Difference (&Delta;V)</div>
+              <div id="diffValue" class="text-2xl font-extrabold font-mono text-phi-400 mt-1">
+                +0.00000
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-slate-400">Relative Delta</div>
+              <div id="diffPercent" class="text-sm font-bold font-mono text-slate-300 mt-1">
+                0.00%
+              </div>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Standard QM predicts symmetry $V_{QM} = V_\phi$ when $A = B$. Under asymmetric intensities ($A \neq B$), Genesis X predicts a hyperbolic increase in visibility above standard QM.
+          </p>
+        </div>
+
+        <!-- FORMULA & MATHEMATICAL BREAKDOWN DISPLAY -->
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Active Formula Numerical Display</h3>
+            <span class="text-[10px] text-phi-400 font-mono">&alpha; + &beta; = 1</span>
+          </div>
+
+          <!-- Formula 1: QM -->
+          <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-800/80 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold text-qm-400">Standard QM Visibility Formula</span>
+              <span id="formulaQmResult" class="text-sm font-bold font-mono text-qm-400">V_QM = 0.0000</span>
+            </div>
+            <div class="text-xs font-mono text-slate-400 bg-slate-950/80 p-2 rounded border border-slate-800 overflow-x-auto">
+              V_QM = 2 &middot; O &middot; &Sqrt;(A &middot; B) / (A + B)
+            </div>
+            <div id="formulaQmSub" class="text-[11px] font-mono text-slate-400 pt-1">
+              = 2 &middot; 0.80 &middot; &Sqrt;(1.00 &middot; 0.50) / (1.00 + 0.50)
+            </div>
+          </div>
+
+          <!-- Formula 2: Genesis X Phi -->
+          <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-800/80 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold text-phi-400">Genesis X Visibility Hypothesis</span>
+              <span id="formulaPhiResult" class="text-sm font-bold font-mono text-phi-400">V_&phi; = 0.0000</span>
+            </div>
+            <div class="text-xs font-mono text-slate-400 bg-slate-950/80 p-2 rounded border border-slate-800 overflow-x-auto">
+              V_&phi; = O &middot; (A<sup>&alpha;</sup> &middot; B<sup>&beta;</sup> + A<sup>&beta;</sup> &middot; B<sup>&alpha;</sup>) / (A + B)
+            </div>
+            <div id="formulaPhiSub" class="text-[11px] font-mono text-slate-400 pt-1">
+              where &alpha; = 1/&phi; &approx; 0.61803, &beta; = 1/&phi;&sup2; &approx; 0.38197
+            </div>
+          </div>
+
+          <!-- Canonical Lattice Law Score & Cosh Form -->
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-500 uppercase">Lattice Law Score (C)</div>
+              <div id="latticeC" class="text-amber-400 font-bold mt-0.5">C = 0.0000</div>
+              <div class="text-[9px] text-slate-500 mt-0.5">O<sup>1</sup> A<sup>1/&phi;</sup> B<sup>1/&phi;&sup2;</sup></div>
+            </div>
+            <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-500 uppercase">Cosh Factor</div>
+              <div id="coshFactor" class="text-slate-200 font-bold mt-0.5">cosh = 1.0000</div>
+              <div class="text-[9px] text-slate-500 mt-0.5">V_&phi; / V_QM factor</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: VISUALIZATIONS & CHARTS (lg:col-span-7 ~ 61.8%) -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- SIDE-BY-SIDE VISIBILITY BAR CHART -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-qm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Visibility Comparison (V_QM vs V_&phi;)
+              </h2>
+              <p class="text-xs text-slate-400">Side-by-side visibility comparison updated in real-time</p>
+            </div>
+
+            <div class="flex items-center gap-3 text-xs font-mono">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-sm bg-qm-400 inline-block"></span>
+                <span class="text-slate-300">QM</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-sm bg-phi-500 inline-block"></span>
+                <span class="text-slate-300">Genesis X (&phi;)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bar Chart Canvas Container -->
+          <div class="relative h-56 sm:h-64 w-full">
+            <canvas id="barChartCanvas"></canvas>
+          </div>
+
+          <!-- Value Display Cards under Bar Chart -->
+          <div class="grid grid-cols-2 gap-4 pt-2">
+            <div class="glass-card-qm rounded-xl p-3 bg-slate-900/90 text-center">
+              <div class="text-xs font-medium text-qm-400">Standard QM Visibility</div>
+              <div id="barQmValue" class="text-2xl font-extrabold font-mono text-white mt-0.5">0.0000</div>
+              <div class="text-[10px] text-slate-400 mt-1">2 O &Sqrt;(AB) / (A + B)</div>
+            </div>
+            <div class="glass-card-phi rounded-xl p-3 bg-slate-900/90 text-center">
+              <div class="text-xs font-medium text-phi-400">Genesis X Visibility</div>
+              <div id="barPhiValue" class="text-2xl font-extrabold font-mono text-white mt-0.5">0.0000</div>
+              <div class="text-[10px] text-slate-400 mt-1">O (A<sup>&alpha;</sup>B<sup>&beta;</sup> + A<sup>&beta;</sup>B<sup>&alpha;</sup>) / (A + B)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PREDICTED INTENSITY LINE CHART -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-phi-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                </svg>
+                Interference Fringe Pattern: Intensity I(&delta;&theta;)
+              </h2>
+              <p class="text-xs text-slate-400">Phase difference &delta;&theta; from 0 to 2&pi; radians (0&deg; to 360&deg;)</p>
+            </div>
+
+            <div class="text-xs font-mono text-slate-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg">
+              I = A + B + 2&middot;O&middot;G&middot;cos(&delta;&theta;)
+            </div>
+          </div>
+
+          <!-- Line Chart Canvas Container -->
+          <div class="relative h-72 sm:h-80 w-full">
+            <canvas id="lineChartCanvas"></canvas>
+          </div>
+
+          <!-- Formulas explanation footer -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+            <div>
+              <span class="font-bold text-qm-400">QM Cross-Amplitude:</span>
+              <span class="font-mono text-slate-300 ml-1">G_QM = &Sqrt;(A &middot; B)</span>
+            </div>
+            <div>
+              <span class="font-bold text-phi-400">Genesis X Cross-Amplitude:</span>
+              <span class="font-mono text-slate-300 ml-1">G_&phi; = 0.5(A<sup>&alpha;</sup>B<sup>&beta;</sup> + A<sup>&beta;</sup>B<sup>&alpha;</sup>)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- EPISTEMIC BOUNDARY NOTICE FOOTER -->
+    <footer class="glass-card rounded-2xl p-6 border-amber-500/20 bg-slate-950/90 text-center space-y-2">
+      <div class="flex items-center justify-center gap-2 text-amber-400 font-bold text-sm tracking-wide uppercase">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        Epistemic Boundary Notice
+      </div>
+      <p class="text-sm font-semibold text-slate-200">
+        Canonical Lattice Law: HYPOTHESIS UNDER TEST. This software does not establish AGI, consciousness, or new physics.
+      </p>
+      <p class="text-xs text-slate-400 max-w-3xl mx-auto leading-relaxed">
+        This interactive discriminator provides standard quantum mechanical and Genesis X mathematical predictions under variable path intensities A, B and coherence O. Empirical physical claims require rigorous falsification against authentic asymmetric double-slit experimental dataset observations.
+      </p>
+      <div class="pt-2 text-[11px] text-slate-500 font-mono">
+        Adrien D. Thomas / ProCityHub &bull; GARVIS Genesis X Double-Slit Brain Test Engine
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- INLINE JAVASCRIPT LOGIC -->
+  <script>
+    // --- MATHEMATICAL CONSTANTS ---
+    const PHI = (1.0 + Math.sqrt(5.0)) / 2.0; // Golden ratio ~ 1.61803398875
+    const ALPHA = 1.0 / PHI;                  // ~ 0.61803398875
+    const BETA = 1.0 / (PHI * PHI);           // ~ 0.38196601125
+    const EPSILON = 1e-12;
+
+    // --- DOM ELEMENTS ---
+    const sliderA = document.getElementById('sliderA');
+    const sliderB = document.getElementById('sliderB');
+    const sliderO = document.getElementById('sliderO');
+
+    const numA = document.getElementById('numA');
+    const numB = document.getElementById('numB');
+    const numO = document.getElementById('numO');
+
+    const classificationBadge = document.getElementById('classificationBadge');
+    const badgeIcon = document.getElementById('badgeIcon');
+    const badgeTitle = document.getElementById('badgeTitle');
+    const badgeSub = document.getElementById('badgeSub');
+
+    const diffValue = document.getElementById('diffValue');
+    const diffPercent = document.getElementById('diffPercent');
+
+    const formulaQmResult = document.getElementById('formulaQmResult');
+    const formulaQmSub = document.getElementById('formulaQmSub');
+    const formulaPhiResult = document.getElementById('formulaPhiResult');
+    const formulaPhiSub = document.getElementById('formulaPhiSub');
+
+    const latticeC = document.getElementById('latticeC');
+    const coshFactor = document.getElementById('coshFactor');
+
+    const barQmValue = document.getElementById('barQmValue');
+    const barPhiValue = document.getElementById('barPhiValue');
+
+    // --- PHYSICS FORMULA CALCULATIONS ---
+
+    /**
+     * Standard Quantum Mechanical Visibility:
+     * V_QM = 2 * O * sqrt(A * B) / (A + B)
+     */
+    function calculateVQM(A, B, O) {
+      if (A + B <= EPSILON) return 0;
+      return (2.0 * O * Math.sqrt(A * B)) / (A + B);
+    }
+
+    /**
+     * Genesis X Golden-Ratio Visibility:
+     * V_phi = O * (A^alpha * B^beta + A^beta * B^alpha) / (A + B)
+     */
+    function calculateVPhi(A, B, O) {
+      if (A + B <= EPSILON) return 0;
+      if (A <= EPSILON || B <= EPSILON) return 0;
+      const term1 = Math.pow(A, ALPHA) * Math.pow(B, BETA);
+      const term2 = Math.pow(A, BETA) * Math.pow(B, ALPHA);
+      return O * (term1 + term2) / (A + B);
+    }
+
+    /**
+     * Canonical Lattice Law Score C = O^1 * A^alpha * B^beta
+     */
+    function calculateLatticeC(A, B, O) {
+      if (A <= EPSILON || B <= EPSILON || O <= EPSILON) return 0;
+      return O * Math.pow(A, ALPHA) * Math.pow(B, BETA);
+    }
+
+    /**
+     * Predicted QM Intensity I_QM = A + B + 2 * O * sqrt(A * B) * cos(delta_theta)
+     */
+    function calculateIQM(A, B, O, deltaTheta) {
+      return A + B + 2.0 * O * Math.sqrt(A * B) * Math.cos(deltaTheta);
+    }
+
+    /**
+     * Predicted Genesis X Intensity I_phi = A + B + 2 * O * G_phi * cos(delta_theta)
+     * where G_phi = 0.5 * (A^alpha * B^beta + A^beta * B^alpha)
+     */
+    function calculateIPhi(A, B, O, deltaTheta) {
+      const gPhi = 0.5 * (Math.pow(A, ALPHA) * Math.pow(B, BETA) + Math.pow(A, BETA) * Math.pow(B, ALPHA));
+      return A + B + 2.0 * O * gPhi * Math.cos(deltaTheta);
+    }
+
+    // --- CHART INSTANCES ---
+    let barChartInstance = null;
+    let lineChartInstance = null;
+
+    function initCharts() {
+      // 1. BAR CHART INITIALIZATION
+      const ctxBar = document.getElementById('barChartCanvas').getContext('2d');
+      
+      const gradientQm = ctxBar.createLinearGradient(0, 0, 0, 300);
+      gradientQm.addColorStop(0, '#38bdf8');
+      gradientQm.addColorStop(1, '#0369a1');
+
+      const gradientPhi = ctxBar.createLinearGradient(0, 0, 0, 300);
+      gradientPhi.addColorStop(0, '#fbbf24');
+      gradientPhi.addColorStop(1, '#d97706');
+
+      barChartInstance = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: ['Standard QM (V_QM)', 'Genesis X Hypothesis (V_φ)'],
+          datasets: [{
+            data: [0, 0],
+            backgroundColor: [gradientQm, gradientPhi],
+            borderColor: ['#38bdf8', '#fbbf24'],
+            borderWidth: 1.5,
+            borderRadius: 8,
+            barThickness: 60
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              titleColor: '#f8fafc',
+              bodyColor: '#e2e8f0',
+              borderColor: '#334155',
+              borderWidth: 1,
+              callbacks: {
+                label: function(context) {
+                  return `Visibility V = ${context.parsed.y.toFixed(5)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              min: 0,
+              max: 1.0,
+              grid: { color: 'rgba(51, 65, 85, 0.4)' },
+              ticks: { color: '#94a3b8', font: { family: 'monospace' } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#e2e8f0', font: { weight: 'bold' } }
+            }
+          }
+        }
+      });
+
+      // 2. LINE CHART INITIALIZATION (Intensity vs Phase deltaTheta)
+      const ctxLine = document.getElementById('lineChartCanvas').getContext('2d');
+      
+      // Generate 101 phase points from 0 to 2*PI
+      const phaseLabels = [];
+      const steps = 100;
+      for (let i = 0; i <= steps; i++) {
+        const rad = (i / steps) * 2 * Math.PI;
+        // Format label for tick marks
+        if (i === 0) phaseLabels.push('0');
+        else if (i === steps / 4) phaseLabels.push('π/2');
+        else if (i === steps / 2) phaseLabels.push('π');
+        else if (i === (3 * steps) / 4) phaseLabels.push('3π/2');
+        else if (i === steps) phaseLabels.push('2π');
+        else phaseLabels.push('');
+      }
+
+      lineChartInstance = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+          labels: phaseLabels,
+          datasets: [
+            {
+              label: 'Standard QM (I_QM)',
+              data: [],
+              borderColor: '#38bdf8',
+              backgroundColor: 'rgba(56, 189, 248, 0.08)',
+              borderWidth: 2.5,
+              pointRadius: 0,
+              pointHoverRadius: 6,
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: 'Genesis X (I_φ)',
+              data: [],
+              borderColor: '#fbbf24',
+              backgroundColor: 'rgba(245, 158, 11, 0.08)',
+              borderWidth: 2.5,
+              borderDash: [5, 4],
+              pointRadius: 0,
+              pointHoverRadius: 6,
+              tension: 0.3,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              display: true,
+              labels: { color: '#cbd5e1', font: { size: 12 } }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#fbbf24',
+              bodyColor: '#e2e8f0',
+              borderColor: '#334155',
+              borderWidth: 1,
+              callbacks: {
+                title: function(items) {
+                  const idx = items[0].dataIndex;
+                  const rad = (idx / steps) * 2 * Math.PI;
+                  const deg = Math.round((idx / steps) * 360);
+                  return `Phase δθ = ${rad.toFixed(2)} rad (${deg}°)`;
+                },
+                label: function(context) {
+                  return `${context.dataset.label}: I = ${context.parsed.y.toFixed(4)} W/m²`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(51, 65, 85, 0.3)' },
+              ticks: { color: '#94a3b8', font: { family: 'monospace' } }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Intensity I (W/m²)',
+                color: '#94a3b8'
+              },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' },
+              ticks: { color: '#94a3b8', font: { family: 'monospace' } }
+            }
+          }
+        }
+      });
+    }
+
+    // --- MAIN UPDATE FUNCTION ---
+    function updateAll() {
+      const A = parseFloat(sliderA.value);
+      const B = parseFloat(sliderB.value);
+      const O = parseFloat(sliderO.value);
+
+      // Keep number inputs in sync
+      numA.value = A.toFixed(2);
+      numB.value = B.toFixed(2);
+      numO.value = O.toFixed(2);
+
+      // Compute Visibilities
+      const vQM = calculateVQM(A, B, O);
+      const vPhi = calculateVPhi(A, B, O);
+      const diff = vPhi - vQM;
+      const relDiff = vQM > EPSILON ? (diff / vQM) * 100 : 0.0;
+
+      // Compute Lattice score & Cosh term
+      const latticeVal = calculateLatticeC(A, B, O);
+      let coshVal = 1.0;
+      if (A > EPSILON && B > EPSILON) {
+        coshVal = Math.cosh(((ALPHA - BETA) / 2.0) * Math.log(A / B));
+      }
+
+      // 1. Update Badge Classification
+      const isSymmetric = Math.abs(A - B) < 0.001;
+      if (isSymmetric) {
+        classificationBadge.className = 'p-4 rounded-xl flex items-center justify-between transition-all duration-300 bg-slate-900/90 border border-cyan-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]';
+        badgeIcon.className = 'w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
+        badgeIcon.innerHTML = '&equals;';
+        badgeTitle.className = 'font-bold text-sm tracking-wide text-cyan-300';
+        badgeTitle.innerText = 'NON-DISCRIMINATING (symmetric)';
+        badgeSub.className = 'text-xs text-slate-400 mt-0.5';
+        badgeSub.innerText = 'Path intensities equal (A ≈ B). Genesis X equals QM predictions.';
+      } else {
+        classificationBadge.className = 'p-4 rounded-xl flex items-center justify-between transition-all duration-300 bg-slate-900/90 border border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.15)]';
+        badgeIcon.className = 'w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse';
+        badgeIcon.innerHTML = '&Delta;';
+        badgeTitle.className = 'font-bold text-sm tracking-wide text-amber-400';
+        badgeTitle.innerText = 'DISCRIMINATING (asymmetric)';
+        badgeSub.className = 'text-xs text-slate-400 mt-0.5';
+        badgeSub.innerText = 'Path intensities unequal (A ≠ B). Falsification test active!';
+      }
+
+      // 2. Update Difference Indicator
+      diffValue.innerText = (diff >= 0 ? '+' : '') + diff.toFixed(5);
+      diffPercent.innerText = (relDiff >= 0 ? '+' : '') + relDiff.toFixed(2) + '%';
+      if (Math.abs(diff) < 1e-5) {
+        diffValue.className = 'text-2xl font-extrabold font-mono text-slate-400 mt-1';
+      } else {
+        diffValue.className = 'text-2xl font-extrabold font-mono text-amber-400 mt-1';
+      }
+
+      // 3. Update Formulas Display
+      formulaQmResult.innerText = `V_QM = ${vQM.toFixed(4)}`;
+      formulaQmSub.innerText = `= 2 · ${O.toFixed(2)} · √(${A.toFixed(2)} · ${B.toFixed(2)}) / (${A.toFixed(2)} + ${B.toFixed(2)})`;
+
+      formulaPhiResult.innerText = `V_φ = ${vPhi.toFixed(4)}`;
+      formulaPhiSub.innerText = `= ${O.toFixed(2)} · (${A.toFixed(2)}^0.618 · ${B.toFixed(2)}^0.382 + ${A.toFixed(2)}^0.382 · ${B.toFixed(2)}^0.618) / (${A.toFixed(2)} + ${B.toFixed(2)})`;
+
+      latticeC.innerText = `C = ${latticeVal.toFixed(4)}`;
+      coshFactor.innerText = `cosh = ${coshVal.toFixed(4)}`;
+
+      // 4. Update Bar Value Cards
+      barQmValue.innerText = vQM.toFixed(4);
+      barPhiValue.innerText = vPhi.toFixed(4);
+
+      // 5. Update Bar Chart
+      if (barChartInstance) {
+        barChartInstance.data.datasets[0].data = [vQM, vPhi];
+        barChartInstance.update('none'); // smooth fast update
+      }
+
+      // 6. Update Line Chart Data (101 phase points)
+      if (lineChartInstance) {
+        const steps = 100;
+        const qmIntensities = [];
+        const phiIntensities = [];
+
+        for (let i = 0; i <= steps; i++) {
+          const deltaTheta = (i / steps) * 2 * Math.PI;
+          qmIntensities.push(calculateIQM(A, B, O, deltaTheta));
+          phiIntensities.push(calculateIPhi(A, B, O, deltaTheta));
+        }
+
+        lineChartInstance.data.datasets[0].data = qmIntensities;
+        lineChartInstance.data.datasets[1].data = phiIntensities;
+        lineChartInstance.update('none');
+      }
+    }
+
+    // --- PRESET SCENARIO HANDLER ---
+    function setPreset(a, b, o) {
+      sliderA.value = a;
+      sliderB.value = b;
+      sliderO.value = o;
+      updateAll();
+    }
+
+    // --- BIND EVENT LISTENERS ---
+    function bindEvents() {
+      sliderA.addEventListener('input', updateAll);
+      sliderB.addEventListener('input', updateAll);
+      sliderO.addEventListener('input', updateAll);
+
+      numA.addEventListener('change', () => {
+        let val = parseFloat(numA.value);
+        if (isNaN(val)) val = 1.0;
+        sliderA.value = Math.max(0.01, Math.min(2.0, val));
+        updateAll();
+      });
+
+      numB.addEventListener('change', () => {
+        let val = parseFloat(numB.value);
+        if (isNaN(val)) val = 0.5;
+        sliderB.value = Math.max(0.01, Math.min(2.0, val));
+        updateAll();
+      });
+
+      numO.addEventListener('change', () => {
+        let val = parseFloat(numO.value);
+        if (isNaN(val)) val = 0.8;
+        sliderO.value = Math.max(0.0, Math.min(1.0, val));
+        updateAll();
+      });
+    }
+
+    // --- INITIALIZE ON DOM LOAD ---
+    document.addEventListener('DOMContentLoaded', () => {
+      initCharts();
+      bindEvents();
+      updateAll();
+    });
+  </script>
+</body>
+</html>

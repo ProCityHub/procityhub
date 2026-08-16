@@ -1,0 +1,13 @@
+{
+  "entity_name": "DeviceState",
+  "schema": {
+    "properties": {
+      "timestamp": { "type": "string" },
+      "battery": { "type": "number" },
+      "online": { "type": "boolean" },
+      "permissions": { "type": "object" },
+      "session_id": { "type": "string" }
+    },
+    "type": "object"
+  }
+}

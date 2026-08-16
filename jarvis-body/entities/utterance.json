@@ -1,0 +1,13 @@
+{
+  "entity_name": "Utterance",
+  "schema": {
+    "properties": {
+      "timestamp": { "type": "string" },
+      "direction": { "type": "string", "enum": ["heard", "spoken"] },
+      "text": { "type": "string" },
+      "confidence": { "type": "number" },
+      "session_id": { "type": "string" }
+    },
+    "type": "object"
+  }
+}

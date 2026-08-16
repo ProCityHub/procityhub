@@ -1,0 +1,13 @@
+{
+  "entity_name": "Frame",
+  "schema": {
+    "properties": {
+      "timestamp": { "type": "string" },
+      "image_url": { "type": "string" },
+      "source": { "type": "string", "enum": ["front", "rear", "upload"] },
+      "session_id": { "type": "string" },
+      "notes": { "type": "string" }
+    },
+    "type": "object"
+  }
+}

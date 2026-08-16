@@ -1,0 +1,12 @@
+{
+  "entity_name": "OrganStatus",
+  "schema": {
+    "properties": {
+      "organ": { "type": "string" },
+      "status": { "type": "string", "enum": ["IMPLEMENTED", "STUB", "ABSENT"] },
+      "last_invoked": { "type": "string" },
+      "notes": { "type": "string" }
+    },
+    "type": "object"
+  }
+}
