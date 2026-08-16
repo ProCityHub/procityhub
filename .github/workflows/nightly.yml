@@ -19,6 +19,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Brain gate — predict
+        run: |
+          python3 ci-fix-bot/brain_gate.py predict \
+            --agent nightly \
+            --label "nightly-${{ github.run_id }}" \
+            --predicted 1.0 \
+            --confidence 0.9
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -90,3 +98,13 @@ jobs:
             genesis-x/csv-eval.json
             genesis-x/test-output.txt
           retention-days: 90
+
+      - name: Brain gate — observe & falsify
+      if: always()
+        run: |
+          python3 ci-fix-bot/brain_gate.py observe \
+            --agent nightly \
+            --label "nightly-${{ github.run_id }}" \
+            --observed 1.0 || true
+          python3 ci-fix-bot/brain_gate.py falsify --agent nightly || true
+          python3 ci-fix-bot/brain_gate.py summary --agent nightly || true

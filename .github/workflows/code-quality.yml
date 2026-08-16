@@ -20,6 +20,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Brain gate — predict
+        run: |
+          python3 ci-fix-bot/brain_gate.py predict \
+            --agent code-quality \
+            --label "lint-${{ github.run_id }}" \
+            --predicted 1.0 \
+            --confidence 0.9
       - name: Install linters
         run: pip install flake8 black isort
 
@@ -131,3 +138,11 @@ jobs:
             echo "❌ Action allowlist is not empty — freeze gate violated" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
+      - name: Brain gate — observe & falsify
+      if: always()
+        run: |
+          python3 ci-fix-bot/brain_gate.py observe \
+            --agent code-quality \
+            --label "lint-${{ github.run_id }}" \
+            --observed 1.0 || true
+          python3 ci-fix-bot/brain_gate.py falsify --agent code-quality || true

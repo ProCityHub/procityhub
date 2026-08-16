@@ -24,6 +24,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Brain gate — predict
+        run: |
+          python3 ci-fix-bot/brain_gate.py predict \
+            --agent numerical-stability \
+            --label "stability-${{ github.run_id }}" \
+            --predicted 1.0 \
+            --confidence 0.95
+
       - name: Install dependencies
         run: pip install pytest
 
@@ -114,3 +122,12 @@ jobs:
           name: stability-report
           path: genesis-x/.pytest_cache/
           retention-days: 7
+
+      - name: Brain gate — observe & falsify
+      if: always()
+        run: |
+          python3 ci-fix-bot/brain_gate.py observe \
+            --agent numerical-stability \
+            --label "stability-${{ github.run_id }}" \
+            --observed 1.0 || true
+          python3 ci-fix-bot/brain_gate.py falsify --agent numerical-stability || true

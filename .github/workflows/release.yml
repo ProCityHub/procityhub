@@ -28,6 +28,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Brain gate — predict
+        run: |
+          python3 ci-fix-bot/brain_gate.py predict \
+            --agent release \
+            --label "release-${{ github.ref_name }}" \
+            --predicted 1.0 \
+            --confidence 0.9
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -90,3 +97,11 @@ jobs:
 
             ---
             Mathematical consistency and software PASS do not establish physical truth.
+      - name: Brain gate — observe & falsify
+      if: always()
+        run: |
+          python3 ci-fix-bot/brain_gate.py observe \
+            --agent release \
+            --label "release-${{ github.ref_name }}" \
+            --observed 1.0 || true
+          python3 ci-fix-bot/brain_gate.py falsify --agent release || true

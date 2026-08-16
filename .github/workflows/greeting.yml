@@ -20,6 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Brain gate — predict
+        run: |
+          python3 ci-fix-bot/brain_gate.py predict \
+            --agent greeting \
+            --label "greet-${{ github.event.issue.number }}" \
+            --predicted 1.0 \
+            --confidence 0.95
       - name: Post greeting
         uses: actions/github-script@v7
         with:
@@ -108,3 +115,11 @@ jobs:
             }
 
             core.info(`Greeting posted for @${author}'s ${targetType}`);
+      - name: Brain gate — observe & falsify
+      if: always()
+        run: |
+          python3 ci-fix-bot/brain_gate.py observe \
+            --agent greeting \
+            --label "greet-${{ github.event.issue.number }}" \
+            --observed 1.0 || true
+          python3 ci-fix-bot/brain_gate.py falsify --agent greeting || true

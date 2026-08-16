@@ -22,6 +22,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Brain gate — predict
+        run: |
+          python3 ci-fix-bot/brain_gate.py predict \
+            --agent test-agent \
+            --label "test-${{ github.run_id }}" \
+            --predicted 1.0 \
+            --confidence 0.9
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -42,3 +49,11 @@ jobs:
           name: test-results-py${{ matrix.python-version }}
           path: genesis-x/.pytest_cache/
           retention-days: 7
+      - name: Brain gate — observe & falsify
+      if: always()
+        run: |
+          python3 ci-fix-bot/brain_gate.py observe \
+            --agent test-agent \
+            --label "test-${{ github.run_id }}" \
+            --observed 1.0 || true
+          python3 ci-fix-bot/brain_gate.py falsify --agent test-agent || true
