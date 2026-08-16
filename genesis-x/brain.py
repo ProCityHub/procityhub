@@ -160,8 +160,8 @@ def phi_visibility(A: float, B: float, O: float = 1.0) -> float:
     """
     A, B, O = validate_inputs(A, B, O)
 
-    term_1 = (A ** ALPHA) * (B ** BETA) if A > EPS and B > EPS else 0.0
-    term_2 = (A ** BETA) * (B ** ALPHA) if A > EPS and B > EPS else 0.0
+    term_1 = (A ** ALPHA) * (B ** BETA) if A > 0 and B > 0 else 0.0
+    term_2 = (A ** BETA) * (B ** ALPHA) if A > 0 and B > 0 else 0.0
 
     return O * (term_1 + term_2) / (A + B)
 

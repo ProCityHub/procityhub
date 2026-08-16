@@ -9,7 +9,7 @@ The Genesis X model is a falsification harness, not a production system. Contrib
 3. **Do** add test coverage for any new mathematical function.
 4. **Do** keep the self-test passing on all supported Python versions.
 
-## JARVIS Body
+## GARVIS Body
 
 The body-without-brain architecture is governed by Directive BASE44_001. Contributions to the body must:
 

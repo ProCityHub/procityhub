@@ -1,8 +1,8 @@
-# JARVIS Body — System Architecture
+# GARVIS Body — System Architecture
 
 ## Directive BASE44_001: Body Without Brain
 
-The JARVIS body is a sensory/motor shell with **zero cognition**. The brain is a socket, not an implementation.
+The GARVIS body is a sensory/motor shell with **zero cognition**. The brain is a socket, not an implementation.
 
 ## Organ Registry
 
@@ -50,4 +50,4 @@ The action dispatcher ships with an **empty allowlist**. All action requests are
 
 When the Genesis X brain is ready to plug in, `brainAdapter.js` is replaced. The `think()` function inspects the envelope's `requested_capability` and routes double-slit evaluation requests to the Genesis X model. All other capabilities remain `NOT_IMPLEMENTED`.
 
-The JARVIS body does not change. Only the brain socket changes.
+The GARVIS body does not change. Only the brain socket changes.

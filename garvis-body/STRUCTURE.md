@@ -1,4 +1,4 @@
-# JARVIS BODY WITHOUT BRAIN — Code Structure
+# GARVIS BODY WITHOUT BRAIN — Code Structure
 
 ## Directive: BASE44_001
 ## Authority: Adrien D. Thomas (ProCityHub)
@@ -9,7 +9,7 @@
 ## Directory Map
 
 ```
-jarvis-body/
+garvis-body/
 ├── BUILDER_PROMPT.md          ← Master spec sent to the Base44 builder
 ├── brainAdapter.js            ← The brain socket (also in src/modules/)
 │
@@ -91,7 +91,7 @@ OrganStatus ─── standalone (registry, 10 fixed organs)
 - [ ] App runs on phone browser (mobile-first, responsive)
 
 ### Next Steps
-1. Create the app at https://app.base44.com (name: "JARVIS Body" or similar)
+1. Create the app at https://app.base44.com (name: "GARVIS Body" or similar)
 2. Tell Solene the app name or ID
 3. Solene sends the BUILDER_PROMPT.md content to the builder
 4. Builder constructs entities, modules, and pages

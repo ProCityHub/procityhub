@@ -2,10 +2,10 @@
 // Stored in sessionStorage so it survives page navigations but not tab closes.
 
 export function getSessionId() {
-  let id = sessionStorage.getItem('jarvis_session_id');
+  let id = sessionStorage.getItem('garvis_session_id');
   if (!id) {
     id = crypto.randomUUID();
-    sessionStorage.setItem('jarvis_session_id', id);
+    sessionStorage.setItem('garvis_session_id', id);
   }
   return id;
 }

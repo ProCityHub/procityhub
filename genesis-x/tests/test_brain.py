@@ -1,4 +1,5 @@
 """Tests for the Genesis X Double-Slit Brain model."""
+import math
 
 import sys
 from pathlib import Path
@@ -127,3 +128,38 @@ def test_load_csv_sample_data():
     score = brain.score()
     assert score.n_asymmetric == 15
     assert score.status is EmpiricalStatus.DIRECTIONAL_SUPPORT_QM
+
+
+class TestEdgeCases:
+    """Numerical edge cases."""
+
+    def test_phi_visibility_at_eps_boundary(self):
+        """V_phi should return non-zero for B = 1e-12 (EPS boundary).
+        
+        Previous bug: B > EPS guard zeroed terms when B == EPS.
+        Fix: changed to B > 0 guard.
+        """
+        v = phi_visibility(1.0, 1e-12, 1.0)
+        assert v > 0, f"V_phi should be > 0, got {v}"
+
+    def test_phi_visibility_extreme_asymmetry(self):
+        """V_phi should remain finite at A/B = 1e6."""
+        v = phi_visibility(1.0, 1e-6, 1.0)
+        assert math.isfinite(v)
+        assert v > 0
+
+    def test_zero_coherence(self):
+        """O=0 should give zero visibility for both models."""
+        assert qm_visibility(1.0, 0.5, 0.0) == 0.0
+        assert phi_visibility(1.0, 0.5, 0.0) == 0.0
+
+
+class TestGARVISIdentity:
+    """Verify GARVIS system identity (not JARVIS)."""
+
+    def test_system_name_is_garvis(self):
+        from brain import SYSTEM, CREATOR, ORGANIZATION
+        assert "GARVIS" in SYSTEM
+        assert "JARVIS" not in SYSTEM
+        assert CREATOR == "Adrien D. Thomas"
+        assert ORGANIZATION == "ProCityHub"

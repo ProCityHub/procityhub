@@ -1,4 +1,4 @@
-# BUILDER PROMPT — JARVIS BODY WITHOUT BRAIN (BASE44_001)
+# BUILDER PROMPT — GARVIS BODY WITHOUT BRAIN (BASE44_001)
 
 ## CRITICAL CONSTRAINTS — READ BEFORE WRITING ANY CODE
 
@@ -185,7 +185,7 @@ Create `src/pages/Console.jsx` — this is the body's face.
 
 ### Layout (top to bottom):
 
-1. **Header bar**: "JARVIS — BODY CONSOLE" title. No claims of intelligence.
+1. **Header bar**: "GARVIS — BODY CONSOLE" title. No claims of intelligence.
 2. **Voice Gate Controls** row:
    - Wake/Sleep toggle button (toggles `awake` state)
    - Mute toggle button (toggles `muted` state)

@@ -1,6 +1,6 @@
 # ProCityHub
 
-**Genesis X — Canonical Lattice Framework & JARVIS Body Architecture**
+**Genesis X — Canonical Lattice Framework & GARVIS Body Architecture**
 
 Creator & Conceptual Architect: **Adrien D. Thomas**
 Organization: **ProCityHub**
@@ -38,9 +38,9 @@ V_QM = 2 · O · √(A·B) / (A + B)
 
 The key insight: for symmetric paths (A = B), both models are identical. For asymmetric paths (A ≠ B), they diverge — and only real experimental data can adjudicate.
 
-### 2. JARVIS Body — Sensory/Motor Shell
+### 2. GARVIS Body — Sensory/Motor Shell
 
-A JARVIS-class assistant architecture built on Base44. The body (voice, vision, memory, action dispatch) is fully implemented. The brain is a socket — currently returning `NOT_IMPLEMENTED` by design. The Genesis X model is the first candidate brain to plug into that socket.
+A GARVIS-class assistant architecture built on Base44. The body (voice, vision, memory, action dispatch) is fully implemented. The brain is a socket — currently returning `NOT_IMPLEMENTED` by design. The Genesis X model is the first candidate brain to plug into that socket.
 
 ---
 
@@ -65,7 +65,7 @@ procityhub/
 ├── visualizations/
 │   └── index.html                     ← Interactive double-slit viz
 │
-├── jarvis-body/                       ← JARVIS shell architecture
+├── garvis-body/                       ← GARVIS shell architecture
 │   ├── brainAdapter.js                ← The brain socket (NOT_IMPLEMENTED)
 │   ├── actionDispatcher.js            ← Action dispatcher (empty allowlist)
 │   ├── organService.js                ← Organ registry seeding
@@ -78,7 +78,7 @@ procityhub/
     ├── genesis-x/
     │   ├── CANONICAL_LATTICE.md        ← Math framework
     │   └── EPISTEMIC_BOUNDARY.md       ← What this is and isn't
-    └── jarvis/
+    └── garvis/
         └── ARCHITECTURE.md            ← System design
 ```
 

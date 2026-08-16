@@ -337,7 +337,7 @@ export default function ConsolePage() {
     <div className="flex flex-col gap-4 p-4 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold tracking-tight">JARVIS — BODY CONSOLE</h1>
+        <h1 className="text-lg font-bold tracking-tight">GARVIS — BODY CONSOLE</h1>
         <Activity className="w-5 h-5 text-muted-foreground" />
       </div>
 
