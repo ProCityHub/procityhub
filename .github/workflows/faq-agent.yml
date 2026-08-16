@@ -1,0 +1,215 @@
+name: GARVIS FAQ Agent
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  respond:
+    name: Answer Questions
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for FAQ triggers
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const comment = context.payload.comment;
+            const label = context.payload.label;
+
+            // The text to scan for keywords
+            const text = comment ? comment.body : (issue ? issue.title + ' ' + issue.body : '');
+            if (!text) return;
+
+            const textLower = text.toLowerCase();
+
+            // Knowledge base — safe, factual, non-cognitive responses.
+            // This is NOT reasoning. It's keyword-matched factual information.
+            // Each answer states what ProCityHub/GARVIS IS and what it is NOT.
+            const FAQ = {
+              'what is procityhub': {
+                keywords: ['what is procityhub', 'what\'s procityhub', 'about procityhub', 'procityhub about'],
+                answer: [
+                  '**What is ProCityHub?**',
+                  '',
+                  'ProCityHub is the research and engineering home for GARVIS (Genesis X). It contains:',
+                  '',
+                  '1. **Genesis X** — a double-slit interference discriminator that compares standard quantum mechanics against a golden-ratio-based alternative. It is a falsification harness, not a claim of truth.',
+                  '2. **GARVIS Body** — a complete sensory/motor shell (voice, vision, memory, action dispatch) with zero cognition. The brain is a socket.',
+                  '',
+                  'Creator: Adrien D. Thomas',
+                  'Epistemic boundary: AGI and consciousness are NOT_ESTABLISHED.',
+                ].join('\n')
+              },
+              'what is garvis': {
+                keywords: ['what is garvis', "what's garvis", 'garvis meaning', 'garvis definition', 'garvis stands for'],
+                answer: [
+                  '**What is GARVIS?**',
+                  '',
+                  'GARVIS is the system name for the ProCityHub project. It has two components:',
+                  '',
+                  '1. **Brain (Genesis X):** A mathematical falsification model. It compares V_QM (standard quantum mechanical visibility) against V_φ (a golden-ratio-based visibility formula). The model does not claim new physics — it tests whether the two can be discriminated.',
+                  '2. **Body:** A sensory/motor shell — voice in/out, camera vision, memory, device state, action dispatch. It has zero cognition by design. The brain is a socket (`brainAdapter.js`) that returns `NOT_IMPLEMENTED`.',
+                  '',
+                  'GARVIS is NOT an AI assistant. It is NOT conscious. It does NOT reason.',
+                ].join('\n')
+              },
+              'what is genesis x': {
+                keywords: ['what is genesis x', "what's genesis x", 'genesis x model', 'genesis x brain', 'explain genesis'],
+                answer: [
+                  '**What is Genesis X?**',
+                  '',
+                  'Genesis X is the brain model of GARVIS. It is a double-slit interference discriminator that compares:',
+                  '',
+                  '- **V_QM** = 2·O·√(A·B)/(A+B) — standard quantum mechanical visibility',
+                  '- **V_φ** = O·(A^α·B^β + A^β·B^α)/(A+B) — golden-ratio-based alternative',
+                  '',
+                  'where α = 1/φ ≈ 0.618, β = 1/φ² ≈ 0.382, φ = golden ratio ≈ 1.618.',
+                  '',
+                  'The model scores both against observed data and reports which has lower error. It is a falsification harness — it tests whether the two models can be discriminated empirically. Mathematical consistency does not establish physical truth.',
+                  '',
+                  'See: [Canonical Lattice](../../blob/main/docs/genesis-x/CANONICAL_LATTICE.md)',
+                ].join('\n')
+              },
+              'epistemic boundary': {
+                keywords: ['epistemic', 'boundary', 'consciousness', 'agi', 'is it ai', 'is it conscious', 'is it aware', 'is it intelligent'],
+                answer: [
+                  '**Epistemic Boundary**',
+                  '',
+                  'GARVIS maintains strict epistemic boundaries:',
+                  '',
+                  '- **AGI:** NOT_ESTABLISHED',
+                  '- **Consciousness:** NOT_ESTABLISHED',
+                  '- **New physics:** NOT_ESTABLISHED',
+                  '- **Canonical lattice law:** HYPOTHESIS_UNDER_TEST',
+                  '- **Interference discriminator:** HYPOTHESIS_UNDER_TEST',
+                  '',
+                  '> Mathematical consistency and software PASS do not establish physical truth.',
+                  '',
+                  'GARVIS does not claim to be intelligent, conscious, or aware. It does not claim to have discovered new physics. It is a falsification harness testing a mathematical hypothesis.',
+                  '',
+                  'See: [Epistemic Boundary](../../blob/main/docs/genesis-x/EPISTEMIC_BOUNDARY.md)',
+                ].join('\n')
+              },
+              'how to contribute': {
+                keywords: ['how to contribute', 'how can i help', 'contributing', 'contribute', 'how do i'],
+                answer: [
+                  '**How to Contribute**',
+                  '',
+                  '1. Read [CONTRIBUTING.md](../../blob/main/CONTRIBUTING.md) for guidelines',
+                  '2. The GARVIS body has a strict **no-LLM policy** — no `InvokeLLM` calls anywhere',
+                  '3. The action allowlist must remain **empty** (freeze gate)',
+                  '4. All references must use the **GARVIS** naming convention (not JARVIS)',
+                  '5. Run `pytest tests/ -v` in `genesis-x/` before submitting',
+                  '',
+                  'All contributions are welcome as long as they respect the epistemic boundaries and directive constraints.',
+                ].join('\n')
+              },
+              'how to install': {
+                keywords: ['how to install', 'install', 'setup', 'getting started', 'how to run', 'how do i run'],
+                answer: [
+                  '**How to Install**',
+                  '',
+                  '```bash',
+                  '# Clone',
+                  'git clone https://github.com/ProCityHub/procityhub.git',
+                  'cd procityhub/genesis-x',
+                  '',
+                  '# Install',
+                  'pip install -e .',
+                  '',
+                  '# Run self-test',
+                  'python brain.py',
+                  '',
+                  '# Run test suite',
+                  'pytest tests/ -v',
+                  '',
+                  '# Evaluate sample data',
+                  'python brain.py examples/sample_data.csv',
+                  '```',
+                  '',
+                  'For the interactive visualization, just open `visualizations/index.html` in a browser.',
+                ].join('\n')
+              },
+              'directive': {
+                keywords: ['directive', 'base44_001', 'freeze gate', 'brain socket', 'brainadapter'],
+                answer: [
+                  '**Directive BASE44_001 — Body Without Brain**',
+                  '',
+                  'The GARVIS body was built under a strict directive:',
+                  '',
+                  '- **Zero LLM calls** — no `InvokeLLM` anywhere',
+                  '- **Zero canned responses** — no fake reasoning',
+                  '- **Single cognition socket** — `brainAdapter.js` is the only seam',
+                  '- **Empty action allowlist** — the freeze gate blocks all outward actions',
+                  '- **ABSENT organs** — BRAIN, WILL, and JUDGMENT return `NOT_IMPLEMENTED`',
+                  '',
+                  'These constraints are enforced by the [Code Quality Agent](../../blob/main/.github/workflows/code-quality.yml) on every push.',
+                ].join('\n')
+              },
+              'agents': {
+                keywords: ['agents', 'workflows', 'github actions', 'ci', 'automation', 'bots'],
+                answer: [
+                  '**GARVIS GitHub Agents**',
+                  '',
+                  'ProCityHub runs 8 automated agents:',
+                  '',
+                  '1. **Test Agent** — CI tests on push/PR (Python 3.9-3.12)',
+                  '2. **Falsification Agent** — daily brain evaluation against synthetic datasets',
+                  '3. **Numerical Stability Agent** — edge case probing on brain.py changes',
+                  '4. **Code Quality Agent** — linting + directive compliance enforcement',
+                  '5. **Nightly Self-Test Agent** — full system check, auto-creates issues on failure',
+                  '6. **Release Agent** — builds and publishes releases on version tags',
+                  '7. **Greeting Agent** — welcomes new visitors on issues/PRs/discussions',
+                  '8. **FAQ Agent** — this one! Answers common questions about ProCityHub',
+                  '',
+                  'All agents are non-cognitive — they use keyword matching and fixed scripts, not LLMs.',
+                ].join('\n')
+              }
+            };
+
+            // Find matching FAQ entry
+            let match = null;
+            for (const [key, entry] of Object.entries(FAQ)) {
+              for (const keyword of entry.keywords) {
+                if (textLower.includes(keyword)) {
+                  match = entry;
+                  break;
+                }
+              }
+              if (match) break;
+            }
+
+            if (!match) {
+              core.info('No FAQ match found — skipping');
+              return;
+            }
+
+            // Add footer
+            const response = match.answer + '\n\n---\n\n_This response was generated by the **GARVIS FAQ Agent** — a safe, non-cognitive keyword-matching bot. It does not think. It does not reason. It matches keywords to factual answers._';
+
+            // Post as issue comment
+            if (issue && !comment) {
+              // New issue with FAQ trigger in title/body
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body: response
+              });
+              core.info(`FAQ response posted for issue #${issue.number}`);
+            } else if (comment && issue) {
+              // Comment on an issue
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body: response
+              });
+              core.info(`FAQ response posted for comment on issue #${issue.number}`);
+            }

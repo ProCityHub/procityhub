@@ -1,0 +1,110 @@
+name: GARVIS Greeting Agent
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+  discussion:
+    types: [created]
+
+jobs:
+  greet:
+    name: Welcome Visitor
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      discussions: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Post greeting
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isIssue = !!context.payload.issue;
+            const isPR = !!context.payload.pull_request;
+            const isDiscussion = !!context.payload.discussion;
+
+            const target = isIssue ? context.payload.issue
+                         : isPR ? context.payload.pull_request
+                         : context.payload.discussion;
+
+            const targetType = isIssue ? 'issue'
+                             : isPR ? 'pull request'
+                             : 'discussion';
+
+            const author = target.user.login;
+
+            const greeting = [
+              `👋 **Welcome to ProCityHub, @${author}!**`,
+              ``,
+              `Thanks for opening this ${targetType}. Here's what you've walked into:`,
+              ``,
+              `---`,
+              ``,
+              `### What is ProCityHub?`,
+              ``,
+              `ProCityHub is the research and engineering home for **GARVIS** (Genesis X) — a physics falsification project and a sensory/motor shell architecture.`,
+              ``,
+              `### What is GARVIS?`,
+              ``,
+              `GARVIS is two things:`,
+              ``,
+              `1. **A Brain** — Genesis X, a mathematical model comparing standard quantum mechanics against a golden-ratio-based interference discriminator. It's a falsification harness, not a claim of truth.`,
+              `2. **A Body** — a complete sensory/motor shell (voice in/out, camera, memory, device state, action dispatch) with **zero cognition**. The brain is a socket, not an implementation.`,
+              ``,
+              `### What GARVIS is NOT`,
+              ``,
+              `- ❌ Not an AI assistant`,
+              `- ❌ Not conscious or self-aware`,
+              `- ❌ Not capable of reasoning, planning, or judgment`,
+              `- ❌ Not making claims about new physics`,
+              ``,
+              `> **Epistemic boundary:** AGI and consciousness are NOT_ESTABLISHED. Mathematical consistency and software PASS do not establish physical truth.`,
+              ``,
+              `### Useful Links`,
+              ``,
+              `- 📖 [README](../../blob/main/README.md) — full project overview`,
+              `- 🧠 [Genesis X Brain](../../tree/main/genesis-x) — the falsification model`,
+              `- 🤖 [GARVIS Body](../../tree/main/garvis-body) — the sensory/motor shell architecture`,
+              `- 📐 [Canonical Lattice](../../blob/main/docs/genesis-x/CANONICAL_LATTICE.md) — the math framework`,
+              `- 🚧 [Epistemic Boundary](../../blob/main/docs/genesis-x/EPISTEMIC_BOUNDARY.md) — what this is and isn't`,
+              `- 📊 [Interactive Visualization](../../blob/main/visualizations/index.html) — live double-slit explorer`,
+              ``,
+              `### Contributing`,
+              ``,
+              `Check out [CONTRIBUTING.md](../../blob/main/CONTRIBUTING.md) for guidelines. All contributions are welcome — but we maintain strict epistemic boundaries and a no-LLM policy in the GARVIS body.`,
+              ``,
+              `---`,
+              ``,
+              `_This greeting was posted by the **GARVIS Greeting Agent** — a safe, non-cognitive welcome bot. It does not think. It does not reason. It just says hello._`,
+            ].join('\n');
+
+            if (isIssue) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: target.number,
+                body: greeting
+              });
+            } else if (isPR) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: target.number,
+                body: greeting
+              });
+            } else if (isDiscussion) {
+              // Discussions API for comments
+              const discussionId = target.node_id;
+              await github.graphql(`
+                mutation AddDiscussionComment($discussionId: ID!, $body: String!) {
+                  addDiscussionComment(input: {discussionId: $discussionId, body: $body}) {
+                    comment { id }
+                  }
+                }
+              `, { discussionId, body: greeting });
+            }
+
+            core.info(`Greeting posted for @${author}'s ${targetType}`);
