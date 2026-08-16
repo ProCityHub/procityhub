@@ -128,6 +128,12 @@ This software is explicitly honest about what it does and does not establish:
 | New physics | **NOT_ESTABLISHED** |
 
 > Mathematical consistency and software PASS do not establish physical truth.
+> A model that fits synthetic data generated from itself is expected to win — that is a software validation, not an empirical result.
+> The discriminator's empirical status is **NOT_EVALUATED** until authentic asymmetric-path experimental data are tested. Until then, the hypothesis remains open.
+>
+> The OAB (Observer, Actor, Bridge) and Identity Cylinder constructs are **engineering representations** for organizing prediction → observation → error. They are not physical claims about the double-slit apparatus or about the nature of observation.
+>
+> — Full text: [`docs/genesis-x/EPISTEMIC_BOUNDARY.md`](docs/genesis-x/EPISTEMIC_BOUNDARY.md)
 
 ---
 
