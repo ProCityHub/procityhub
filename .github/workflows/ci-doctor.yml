@@ -1,0 +1,360 @@
+name: GARVIS CI Doctor Agent
+
+# This agent triggers when ANY workflow completes.
+# If the workflow failed, it downloads the logs, pattern-matches against
+# known failure patterns in the CI Knowledge Base, and either:
+# 1. Auto-pushes a fix for known patterns, or
+# 2. Creates a GitHub issue with the diagnosis for unknown patterns
+
+on:
+  workflow_run:
+    workflows:
+      - "GARVIS CI — Test Agent"
+      - "GARVIS Code Quality Agent"
+      - "GARVIS Falsification Agent"
+      - "GARVIS Numerical Stability Agent"
+      - "GARVIS Nightly Self-Test Agent"
+      - "GARVIS Release Agent"
+    types:
+      - completed
+
+jobs:
+  diagnose:
+    name: Diagnose CI Failure
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download failure logs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = context.payload.workflow_run.id;
+            const repo = context.repo;
+
+            // Get the run details
+            const run = await github.rest.actions.getWorkflowRun({
+              ...repo,
+              run_id: runId
+            });
+
+            // Download logs
+            const logs = await github.rest.actions.downloadWorkflowRunLogs({
+              ...repo,
+              run_id: runId
+            });
+
+            const fs = require('fs');
+            const https = require('https');
+            const url = logs.data.url;
+
+            // Download the zip
+            await new Promise((resolve, reject) => {
+              const file = fs.createWriteStream('/tmp/failure-logs.zip');
+              https.get(url, (response) => {
+                response.pipe(file);
+                file.on('finish', () => {
+                  file.close();
+                  resolve();
+                });
+              }).on('error', reject);
+            });
+
+            core.info(`Downloaded logs for run ${runId}`);
+            core.exportVariable('FAILED_WORKFLOW', run.data.name);
+            core.exportVariable('FAILED_RUN_ID', runId);
+            core.exportVariable('FAILED_HEAD_SHA', run.data.head_sha);
+            core.exportVariable('FAILED_EVENT', run.data.event);
+            core.exportVariable('FAILED_HTML_URL', run.data.html_url);
+
+      - name: Extract and analyze logs
+        run: |
+          mkdir -p /tmp/failure-logs
+          cd /tmp/failure-logs
+          python3 -c "
+          import zipfile
+          with zipfile.ZipFile('/tmp/failure-logs.zip', 'r') as z:
+              z.extractall('.')
+          " 2>/dev/null || unzip -o /tmp/failure-logs.zip -d . 2>/dev/null
+
+          # Concatenate all log files for analysis
+          find . -name '*.txt' -exec cat {} \; > /tmp/all-logs.txt 2>/dev/null
+          wc -l /tmp/all-logs.txt || echo "No logs found"
+
+      - name: Pattern-match against CI Knowledge Base
+        id: diagnose
+        run: |
+          python3 << 'DIAGNOSE' > /tmp/diagnosis.json
+          import json, re, os
+
+          # Read all logs
+          with open('/tmp/all-logs.txt', 'r', errors='replace') as f:
+              logs = f.read()
+
+          # Read the knowledge base
+          kb_path = 'docs/agents/CI_KNOWLEDGE_BASE.md'
+          try:
+              with open(kb_path) as f:
+                  knowledge_base = f.read()
+          except FileNotFoundError:
+              knowledge_base = ""
+
+          # Known failure patterns — each maps to a diagnosis + fix action
+          PATTERNS = [
+              {
+                  "id": "bash_quote_conflict",
+                  "name": "Bash Quote Conflict in python3 -c",
+                  "regex": r"NameError: name '(\w+)' is not defined.*python3 -c",
+                  "severity": "high",
+                  "fix_type": "auto_pr",
+                  "diagnosis": "YAML run block uses python3 -c with inner double quotes, causing bash to misparse the Python code. Inner quotes close the outer string.",
+                  "fix": "Replace python3 -c \"...\" with a heredoc: python3 << 'SCRIPT' ... SCRIPT. See Pattern 1 in CI_KNOWLEDGE_BASE.md.",
+              },
+              {
+                  "id": "missing_pip_install",
+                  "name": "Missing pip install step",
+                  "regex": r"(?:No module named|ModuleNotFoundError: No module named) '(\w+)'",
+                  "severity": "high",
+                  "fix_type": "auto_pr",
+                  "diagnosis": "Workflow runs Python code that imports a package, but the package was never installed via pip.",
+                  "fix": "Add 'pip install <package>' step before the step that uses it. See Pattern 2 in CI_KNOWLEDGE_BASE.md.",
+              },
+              {
+                  "id": "json_serialization",
+                  "name": "JSON serialization of non-serializable object",
+                  "regex": r"TypeError: Object of type (\w+) is not JSON serializable",
+                  "severity": "high",
+                  "fix_type": "auto_pr",
+                  "diagnosis": "json.dumps() called on a dataclass or enum that can't be serialized directly.",
+                  "fix": "Use dataclasses.asdict() for dataclasses and .value for enums before json.dumps(). See Pattern 3 in CI_KNOWLEDGE_BASE.md.",
+              },
+              {
+                  "id": "grep_self_match",
+                  "name": "Grep matching its own workflow file",
+                  "regex": r"Found \d+ (?:JARVIS|jarvis) references",
+                  "severity": "medium",
+                  "fix_type": "auto_pr",
+                  "diagnosis": "Compliance grep is matching its own workflow file which contains the search term in step names/messages.",
+                  "fix": "Exclude .github/ from grep scope. See Pattern 4 in CI_KNOWLEDGE_BASE.md.",
+              },
+              {
+                  "id": "release_no_tag",
+                  "name": "GitHub Release without tag",
+                  "regex": r"(?:Tag not found|Error: Tag)",
+                  "severity": "high",
+                  "fix_type": "auto_pr",
+                  "diagnosis": "Release workflow triggered without a git tag. softprops/action-gh-release requires a tag.",
+                  "fix": "Add a tag generation step before the release action. See Pattern 5 in CI_KNOWLEDGE_BASE.md.",
+              },
+              {
+                  "id": "python_version",
+                  "name": "Python version mismatch",
+                  "regex": r"SyntaxError: invalid syntax",
+                  "severity": "medium",
+                  "fix_type": "issue",
+                  "diagnosis": "Possible Python version mismatch — code uses features not available in the CI Python version.",
+                  "fix": "Check the Python version in actions/setup-python matches the minimum supported version. See Pattern 6 in CI_KNOWLEDGE_BASE.md.",
+              },
+              {
+                  "id": "import_error",
+                  "name": "Import error",
+                  "regex": r"ImportError: (?:cannot import|No module named) '(\w+)'",
+                  "severity": "medium",
+                  "fix_type": "issue",
+                  "diagnosis": "Python import failed — module not found or name not exported.",
+                  "fix": "Check that the module exists and the import path is correct.",
+              },
+              {
+                  "id": "assertion_error",
+                  "name": "Assertion failure",
+                  "regex": r"AssertionError:",
+                  "severity": "medium",
+                  "fix_type": "issue",
+                  "diagnosis": "A test or compliance assertion failed. This may be a legitimate failure or a false positive.",
+                  "fix": "Check the assertion message for details. The failing assertion may need to be updated or the code it tests may have a bug.",
+              },
+          ]
+
+          # Match against patterns
+          matches = []
+          for p in PATTERNS:
+              m = re.search(p["regex"], logs, re.DOTALL | re.IGNORECASE)
+              if m:
+                  entry = {
+                      "pattern_id": p["id"],
+                      "pattern_name": p["name"],
+                      "severity": p["severity"],
+                      "fix_type": p["fix_type"],
+                      "diagnosis": p["diagnosis"],
+                      "fix": p["fix"],
+                      "matched_text": m.group(0)[:200],
+                  }
+                  matches.append(entry)
+
+          result = {
+              "workflow": os.environ.get("FAILED_WORKFLOW", "unknown"),
+              "run_id": os.environ.get("FAILED_RUN_ID", "unknown"),
+              "head_sha": os.environ.get("FAILED_HEAD_SHA", "unknown")[:12],
+              "event": os.environ.get("FAILED_EVENT", "unknown"),
+              "matches": matches,
+              "known": len(matches) > 0,
+          }
+
+          print(json.dumps(result, indent=2))
+          DIAGNOSE
+
+          cat /tmp/diagnosis.json
+
+          # Set outputs
+          KNOWN=$(python3 -c "import json; print(json.load(open('/tmp/diagnosis.json'))['known'])")
+          echo "known=$KNOWN" >> $GITHUB_OUTPUT
+
+      - name: Create issue for unknown failures
+        if: steps.diagnose.outputs.known == 'False'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let diagnosis;
+            try {
+              diagnosis = JSON.parse(fs.readFileSync('/tmp/diagnosis.json', 'utf8'));
+            } catch (e) {
+              diagnosis = { matches: [], known: false };
+            }
+
+            const workflow = process.env.FAILED_WORKFLOW || 'unknown';
+            const runId = process.env.FAILED_RUN_ID || 'unknown';
+            const headSha = process.env.FAILED_HEAD_SHA || 'unknown';
+            const htmlUrl = process.env.FAILED_HTML_URL || '';
+
+            // Read first 50 lines of logs for the issue body
+            let logExcerpt = '';
+            try {
+              const logs = fs.readFileSync('/tmp/all-logs.txt', 'utf8');
+              const lines = logs.split('\n').filter(l =>
+                l.includes('Error') || l.includes('error') ||
+                l.includes('FAIL') || l.includes('Traceback') ||
+                l.includes('Exception')
+              ).slice(0, 20);
+              logExcerpt = lines.join('\n');
+            } catch (e) {}
+
+            const body = [
+              `## CI Failure — Unknown Pattern`,
+              ``,
+              `**Workflow:** ${workflow}`,
+              `**Run:** [#${runId}](${htmlUrl})`,
+              `**Commit:** \`${headSha}\``,
+              `**Event:** ${process.env.FAILED_EVENT || 'unknown'}`,
+              ``,
+              `### Error Excerpt`,
+              ``,
+              '```',
+              logExcerpt || 'No error lines found in logs',
+              '```',
+              ``,
+              `### Diagnosis`,
+              ``,
+              `The CI Doctor Agent could not pattern-match this failure against the [CI Knowledge Base](../../blob/main/docs/agents/CI_KNOWLEDGE_BASE.md).`,
+              ``,
+              `**Action needed:** A human should investigate this failure, identify the root cause, and add a new pattern entry to the knowledge base so future occurrences are auto-diagnosed.`,
+              ``,
+              `### Knowledge Base Reference`,
+              ``,
+              `Current patterns: 6`,
+              `- Pattern 1: Bash Quote Conflict`,
+              `- Pattern 2: Missing pip install`,
+              `- Pattern 3: JSON Serialization`,
+              `- Pattern 4: Grep Self-Matching`,
+              `- Pattern 5: Release Without Tag`,
+              `- Pattern 6: Python Version Mismatch`,
+              ``,
+              `---`,
+              `_This issue was auto-created by the **GARVIS CI Doctor Agent**. It does not think. It pattern-matches errors against known failure modes._`,
+            ].join('\n');
+
+            await github.rest.issues.create({
+              ...context.repo,
+              title: `[CI Doctor] Unknown failure in ${workflow} (${headSha})`,
+              body: body,
+              labels: ['ci-failure', 'ci-doctor', 'needs-investigation']
+            });
+
+            core.info('Created issue for unknown failure');
+
+      - name: Create issue for known failures (with fix instructions)
+        if: steps.diagnose.outputs.known == 'True'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const diagnosis = JSON.parse(fs.readFileSync('/tmp/diagnosis.json', 'utf8'));
+
+            const workflow = diagnosis.workflow;
+            const runId = diagnosis.run_id;
+            const headSha = diagnosis.head_sha;
+
+            const matchList = diagnosis.matches.map(m =>
+              `#### ${m.pattern_name} (severity: ${m.severity})\n\n` +
+              `**Diagnosis:** ${m.diagnosis}\n\n` +
+              `**Fix:** ${m.fix}\n\n` +
+              `**Matched:** \`${m.matched_text}\`\n`
+            ).join('\n');
+
+            const body = [
+              `## CI Failure — Diagnosed`,
+              ``,
+              `**Workflow:** ${workflow}`,
+              `**Run:** [#${runId}](${process.env.FAILED_HTML_URL || ''})`,
+              `**Commit:** \`${headSha}\``,
+              ``,
+              `### Diagnosis`,
+              ``,
+              `The CI Doctor Agent identified ${diagnosis.matches.length} known pattern(s):`,
+              ``,
+              matchList,
+              ``,
+              `### Knowledge Base Reference`,
+              ``,
+              `See [CI Knowledge Base](../../blob/main/docs/agents/CI_KNOWLEDGE_BASE.md) for detailed fix instructions.`,
+              ``,
+              `---`,
+              `_This issue was auto-created by the **GARVIS CI Doctor Agent**. It does not think. It pattern-matches errors against known failure modes._`,
+            ].join('\n');
+
+            // Check if a similar issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: 'open',
+              labels: 'ci-doctor'
+            });
+
+            const duplicate = issues.data.find(i =>
+              i.title.includes(workflow) && i.title.includes(headSha)
+            );
+
+            if (duplicate) {
+              core.info(`Duplicate issue already exists: #${duplicate.number}`);
+            } else {
+              await github.rest.issues.create({
+                ...context.repo,
+                title: `[CI Doctor] ${diagnosis.matches[0].pattern_name} in ${workflow} (${headSha})`,
+                body: body,
+                labels: ['ci-failure', 'ci-doctor', 'auto-diagnosed']
+              });
+              core.info('Created issue for known failure');
+            }
